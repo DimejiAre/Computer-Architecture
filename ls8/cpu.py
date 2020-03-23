@@ -71,22 +71,21 @@ class CPU:
         inc_size = 0
         self.pc = 0
 
-        # IR = self.pc
         operand_a = self.ram_read(self.pc + 1)
         operand_b = self.ram_read(self.pc + 2)
 
         while running:
-            cmd = self.ram[self.pc]
+            IR = self.ram[self.pc]
 
-            if cmd == self.LDI:
+            if IR == self.LDI:
                 self.reg[operand_a] = operand_b
                 inc_size = 3
             
-            elif cmd == self.PRN:
+            elif IR == self.PRN:
                 print(self.reg[operand_a])
                 inc_size = 2
             
-            elif cmd == self.HLT:
+            elif IR == self.HLT:
                 running = False
 
             else:
