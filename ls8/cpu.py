@@ -14,6 +14,8 @@ class CPU:
         self.LDI = 0b10000010
         self.PRN = 0b01000111
         self.MUL = 0b10100010
+        self.PUSH = 0b01000101
+        self.POP = 0b01000110
 
     def load(self):
         """Load a program into memory."""
@@ -121,7 +123,6 @@ class CPU:
         #         reg[operand_a] = operand_b
         #         inc_size = (LDI >> 6) + 1
         #         self.pc += inc_size
-        #         print("after ldi", self.pc)
 
         #     def handle_prn(self):
         #         operand_a = ram_read(self.pc + 1)
@@ -132,7 +133,6 @@ class CPU:
         #     def handle_mul(self):
         #         operand_a = ram_read(self.pc + 1)
         #         operand_b = ram_read(self.pc + 2)
-        #         print("operand a,b", self.pc, operand_a, operand_b)
         #         alu('MUL', operand_a, operand_b)
         #         inc_size = (MUL >> 6) + 1
         #         self.pc += inc_size
@@ -164,6 +164,7 @@ class CPU:
         running = True
         inc_size = 0
         self.pc = 0
+        sp = 7
 
         while running:
             IR = self.ram[self.pc]
@@ -184,6 +185,23 @@ class CPU:
                 operand_b = self.ram_read(self.pc + 2)
                 self.alu('MUL', operand_a, operand_b)
                 inc_size = (self.MUL >> 6) + 1
+
+            elif IR == self.PUSH:
+                register = self.ram_read(self.pc + 1)
+                val = self.reg[register]
+
+                self.reg[sp] -= 1
+                self.ram_write(self.reg[sp], val)
+                inc_size = (self.PUSH >> 6) + 1
+
+            elif IR == self.POP:
+                register = self.ram_read(self.pc + 1)
+                val = self.ram_read(self.reg[sp])
+
+                self.reg[register] = val
+                self.reg[sp] += 1
+                inc_size = (self.POP >> 6) + 1
+
             
             elif IR == self.HLT:
                 running = False
