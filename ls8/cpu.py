@@ -16,6 +16,9 @@ class CPU:
         self.MUL = 0b10100010
         self.PUSH = 0b01000101
         self.POP = 0b01000110
+        self.CALL = 0b01010000
+        self.RET = 0b00010001
+        self.ADD = 0b10100000
 
     def load(self):
         """Load a program into memory."""
@@ -201,6 +204,28 @@ class CPU:
                 self.reg[register] = val
                 self.reg[sp] += 1
                 inc_size = (self.POP >> 6) + 1
+
+            elif IR == self.CALL:
+                # val = self.pc + (self.POP >> 6) + 1
+                val = self.pc + 2
+                self.reg[sp] -= 1
+                self.ram_write(self.reg[sp], val)
+
+                register = self.ram_read(self.pc + 1)
+                self.pc = self.reg[register]
+                inc_size = 0
+            
+            elif IR == self.RET:
+                val = self.ram_read(self.reg[sp])
+                self.pc = val
+                self.reg[sp] += 1
+                inc_size = 0
+
+            elif IR == self.ADD:
+                operand_a = self.ram_read(self.pc + 1)
+                operand_b = self.ram_read(self.pc + 2)
+                self.alu('ADD', operand_a, operand_b)
+                inc_size = (self.MUL >> 6) + 1
 
             
             elif IR == self.HLT:
