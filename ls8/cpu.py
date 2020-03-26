@@ -19,6 +19,80 @@ class CPU:
         self.CALL = 0b01010000
         self.RET = 0b00010001
         self.ADD = 0b10100000
+        self.bt = {
+            self.LDI: self.handle_ldi,
+            self.PRN: self.handle_prn,
+            self.MUL: self.handle_mul,
+            self.HLT: self.handle_hlt,
+            self.PUSH: self.handle_push,
+            self.POP: self.handle_pop,
+            self.CALL: self.handle_call,
+            self.RET: self.handle_ret,
+            self.ADD: self.handle_add
+        }
+    
+    def handle_ldi(self, operand_a, operand_b):
+        self.reg[operand_a] = operand_b
+        inc_size = (self.LDI >> 6) + 1
+        return inc_size
+
+    def handle_prn(self, operand_a, operand_b):
+        print(self.reg[operand_a])
+        inc_size = (self.PRN >> 6) + 1
+        return inc_size
+
+    def handle_mul(self, operand_a, operand_b):
+        self.alu('MUL', operand_a, operand_b)
+        inc_size = (self.MUL >> 6) + 1
+        return inc_size
+
+    def handle_push(self, operand_a, operand_b):
+        sp = 7
+        register = operand_a
+        val = self.reg[register]
+        self.reg[sp] -= 1
+        print("reg[sp]", self.reg[sp])
+        self.ram_write(self.reg[sp], val)
+        inc_size = (self.PUSH >> 6) + 1
+        return inc_size
+    
+    def handle_pop(self, operand_a, operand_b):
+        sp = 7
+        register = operand_a
+        val = self.ram_read(self.reg[sp])
+
+        self.reg[register] = val
+        self.reg[sp] += 1
+        inc_size = (self.POP >> 6) + 1
+        return inc_size
+
+    def handle_call(self, operand_a, operand_b):
+        sp = 7
+        val = self.pc + (self.CALL >> 6) + 1
+        self.reg[sp] -= 1
+        self.ram_write(self.reg[sp], val)
+
+        register = operand_a
+        self.pc = self.reg[register]
+        inc_size = 0
+        return inc_size
+    
+    def handle_ret(self,operand_a, operand_b):
+        sp = 7
+        val = self.ram_read(self.reg[sp])
+        self.pc = val
+        self.reg[sp] += 1
+        inc_size = 0
+        return inc_size
+
+    def handle_add(self, operand_a, operand_b):
+        self.alu('ADD', operand_a, operand_b)
+        inc_size = (self.MUL >> 6) + 1
+        return inc_size
+
+    def handle_hlt(self, operand_a, operand_b):
+        sys.exit(1)
+
 
     def load(self):
         """Load a program into memory."""
@@ -100,139 +174,91 @@ class CPU:
         self.ram[MAR] = MDR
 
     def run(self):
-
-        # LDI = self.LDI
-        # PRN = self.PRN
-        # MUL = self.MUL
-        # HLT = self.HLT
-        # ram_read = self.ram_read
-        # alu = self.alu
-        # reg = self.reg
-
-        # class Dispatch:
-
-        #     def __init__(self):
-        #         # Set up the branch table
-        #         self.branchtable = {}
-        #         self.branchtable[LDI] = self.handle_ldi
-        #         self.branchtable[PRN] = self.handle_prn
-        #         self.branchtable[MUL] = self.handle_mul
-        #         self.branchtable[HLT] = self.handle_hlt
-        #         self.pc = 0
-
-        #     def handle_ldi(self):
-        #         operand_a = ram_read(self.pc + 1)
-        #         operand_b = ram_read(self.pc + 2)
-        #         reg[operand_a] = operand_b
-        #         inc_size = (LDI >> 6) + 1
-        #         self.pc += inc_size
-
-        #     def handle_prn(self):
-        #         operand_a = ram_read(self.pc + 1)
-        #         print(reg[operand_a])
-        #         inc_size = (PRN >> 6) + 1
-        #         self.pc += inc_size
-
-        #     def handle_mul(self):
-        #         operand_a = ram_read(self.pc + 1)
-        #         operand_b = ram_read(self.pc + 2)
-        #         alu('MUL', operand_a, operand_b)
-        #         inc_size = (MUL >> 6) + 1
-        #         self.pc += inc_size
-
-        #     def handle_hlt(self):
-        #         sys.exit(1)
-
-        #     def run(self):
-        #         #calls into the branch table
-        #         ir = LDI
-        #         self.branchtable[ir]()
-
-        #         ir = LDI
-        #         self.branchtable[ir]()
-
-        #         ir = MUL
-        #         self.branchtable[ir]()
-
-        #         ir = PRN
-        #         self.branchtable[ir]()
-
-        #         ir = HLT
-        #         self.branchtable[ir]()
-
-        # c = Dispatch()
-        # c.run()
-
-        """Run the CPU."""
         running = True
-        inc_size = 0
-        self.pc = 0
-        sp = 7
 
         while running:
+
             IR = self.ram[self.pc]
+            operand_a = self.ram_read(self.pc + 1)
+            operand_b = self.ram_read(self.pc + 2)
 
-            if IR == self.LDI:
-                operand_a = self.ram_read(self.pc + 1)
-                operand_b = self.ram_read(self.pc + 2)
-                self.reg[operand_a] = operand_b
-                inc_size = (self.LDI >> 6) + 1
-            
-            elif IR == self.PRN:
-                operand_a = self.ram_read(self.pc + 1)
-                print(self.reg[operand_a])
-                inc_size = (self.PRN >> 6) + 1
-
-            elif IR == self.MUL:
-                operand_a = self.ram_read(self.pc + 1)
-                operand_b = self.ram_read(self.pc + 2)
-                self.alu('MUL', operand_a, operand_b)
-                inc_size = (self.MUL >> 6) + 1
-
-            elif IR == self.PUSH:
-                register = self.ram_read(self.pc + 1)
-                val = self.reg[register]
-
-                self.reg[sp] -= 1
-                self.ram_write(self.reg[sp], val)
-                inc_size = (self.PUSH >> 6) + 1
-
-            elif IR == self.POP:
-                register = self.ram_read(self.pc + 1)
-                val = self.ram_read(self.reg[sp])
-
-                self.reg[register] = val
-                self.reg[sp] += 1
-                inc_size = (self.POP >> 6) + 1
-
-            elif IR == self.CALL:
-                # val = self.pc + (self.POP >> 6) + 1
-                val = self.pc + 2
-                self.reg[sp] -= 1
-                self.ram_write(self.reg[sp], val)
-
-                register = self.ram_read(self.pc + 1)
-                self.pc = self.reg[register]
-                inc_size = 0
-            
-            elif IR == self.RET:
-                val = self.ram_read(self.reg[sp])
-                self.pc = val
-                self.reg[sp] += 1
-                inc_size = 0
-
-            elif IR == self.ADD:
-                operand_a = self.ram_read(self.pc + 1)
-                operand_b = self.ram_read(self.pc + 2)
-                self.alu('ADD', operand_a, operand_b)
-                inc_size = (self.MUL >> 6) + 1
-
-            
-            elif IR == self.HLT:
-                running = False
-
+            if IR in self.bt:
+                inc_size = self.bt[IR](operand_a, operand_b)
+                self.pc += inc_size
             else:
-                print("Invalid Instruction")
-                running = False
+                raise Exception(f"Invalid instruction {hex(IR)} at address {hex(self.pc)}")
 
-            self.pc += inc_size
+
+        """Run the CPU."""
+        # running = True
+        # inc_size = 0
+        # self.pc = 0
+        # sp = 7
+
+        # while running:
+        #     IR = self.ram[self.pc]
+
+        #     if IR == self.LDI:
+        #         operand_a = self.ram_read(self.pc + 1)
+        #         operand_b = self.ram_read(self.pc + 2)
+        #         self.reg[operand_a] = operand_b
+        #         inc_size = (self.LDI >> 6) + 1
+            
+        #     elif IR == self.PRN:
+        #         operand_a = self.ram_read(self.pc + 1)
+        #         print(self.reg[operand_a])
+        #         inc_size = (self.PRN >> 6) + 1
+
+        #     elif IR == self.MUL:
+        #         operand_a = self.ram_read(self.pc + 1)
+        #         operand_b = self.ram_read(self.pc + 2)
+        #         self.alu('MUL', operand_a, operand_b)
+        #         inc_size = (self.MUL >> 6) + 1
+
+        #     elif IR == self.PUSH:
+        #         register = self.ram_read(self.pc + 1)
+        #         val = self.reg[register]
+
+        #         self.reg[sp] -= 1
+        #         self.ram_write(self.reg[sp], val)
+        #         inc_size = (self.PUSH >> 6) + 1
+
+        #     elif IR == self.POP:
+        #         register = self.ram_read(self.pc + 1)
+        #         val = self.ram_read(self.reg[sp])
+
+        #         self.reg[register] = val
+        #         self.reg[sp] += 1
+        #         inc_size = (self.POP >> 6) + 1
+
+        #     elif IR == self.CALL:
+        #         # val = self.pc + (self.CALL >> 6) + 1
+        #         val = self.pc + 2
+        #         self.reg[sp] -= 1
+        #         self.ram_write(self.reg[sp], val)
+
+        #         register = self.ram_read(self.pc + 1)
+        #         self.pc = self.reg[register]
+        #         inc_size = 0
+            
+        #     elif IR == self.RET:
+        #         val = self.ram_read(self.reg[sp])
+        #         self.pc = val
+        #         self.reg[sp] += 1
+        #         inc_size = 0
+
+        #     elif IR == self.ADD:
+        #         operand_a = self.ram_read(self.pc + 1)
+        #         operand_b = self.ram_read(self.pc + 2)
+        #         self.alu('ADD', operand_a, operand_b)
+        #         inc_size = (self.MUL >> 6) + 1
+
+            
+        #     elif IR == self.HLT:
+        #         running = False
+
+        #     else:
+        #         print("Invalid Instruction")
+        #         running = False
+
+        #     self.pc += inc_size
