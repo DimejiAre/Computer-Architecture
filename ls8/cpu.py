@@ -10,6 +10,7 @@ class CPU:
         self.ram = [0] * 256
         self.reg = [0] * 8
         self.pc = 0
+        self.FL = 0b00000000
         self.HLT = 0b00000001
         self.LDI = 0b10000010
         self.PRN = 0b01000111
@@ -19,6 +20,10 @@ class CPU:
         self.CALL = 0b01010000
         self.RET = 0b00010001
         self.ADD = 0b10100000
+        self.CMP = 0b10100111
+        self.JMP = 0b01010100
+        self.JEQ = 0b01010101
+        self.JNE = 0b01010110
         self.bt = {
             self.LDI: self.handle_ldi,
             self.PRN: self.handle_prn,
@@ -28,7 +33,11 @@ class CPU:
             self.POP: self.handle_pop,
             self.CALL: self.handle_call,
             self.RET: self.handle_ret,
-            self.ADD: self.handle_add
+            self.ADD: self.handle_add,
+            self.CMP: self.handle_cmp,
+            self.JMP: self.handle_jmp,
+            self.JEQ: self.handle_jeq,
+            self.JNE: self.handle_jne,
         }
     
     def handle_ldi(self, operand_a, operand_b):
@@ -89,6 +98,43 @@ class CPU:
         self.alu('ADD', operand_a, operand_b)
         inc_size = (self.MUL >> 6) + 1
         return inc_size
+    
+    def handle_cmp(self, operand_a, operand_b):
+        reg_a = self.reg[operand_a]
+        reg_b = self.reg[operand_b]
+
+        if reg_a == reg_b:
+            self.FL = 0b00000001
+        elif reg_a < reg_b:
+            self.FL = 0b00000100
+        else:
+            self.FL = 0b00000010
+
+        inc_size = (self.CMP >> 6) + 1
+        return inc_size
+    
+    def handle_jmp(self, operand_a, operand_b):
+        self.pc = self.reg[operand_a]
+        inc_size = 0
+        return inc_size
+
+    def handle_jeq(self, operand_a, operand_b):
+        if (self.FL & 0b00000001):
+            self.pc = self.reg[operand_a]
+            inc_size = 0
+        else:
+            inc_size = (self.JEQ >> 6) + 1
+        return inc_size
+
+    def handle_jne(self, operand_a, operand_b):
+        if not (self.FL & 0b00000001):
+            self.pc = self.reg[operand_a]
+            inc_size = 0
+        else:
+            inc_size = (self.JEQ >> 6) + 1
+        return inc_size
+
+
 
     def handle_hlt(self, operand_a, operand_b):
         sys.exit(1)
